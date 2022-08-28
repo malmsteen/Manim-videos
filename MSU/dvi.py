@@ -1,10 +1,75 @@
-from turtle import down
+from turtle import down, right
 from manim import *
 
 import numpy as np
 import string
 from sympy import symbols
 from sympy.solvers.solveset import nonlinsolve
+
+
+class intro(Scene):
+    def construct(self):
+        tmpl = TexTemplate()
+        tmpl.add_to_preamble(r"""
+        \usepackage{mathtext}
+        \usepackage[T2A]{fontenc}
+        \usepackage[utf8]{inputenc}
+        """)
+
+        text = ['Дополнительные',
+                'вступительные испытания МГУ', '2022, 5 поток']
+        # title1 = Text('Дополнительные', font='sans serif')
+        # title2 = Text('вступительные испытания МГУ', font='sans serif')
+        title = Group(*[Text(t, font='sans serif', font_size=36)
+                        for t in text]).arrange(DOWN)
+        for t in title:
+            t.to_edge(RIGHT)
+
+        subtitle = Text('Планиметрия', font='sans serif',
+                        font_size=34, color=RED_A)
+        logo = Text('repetit-fm.ru', font='ubuntu')
+
+        g = Group(title, subtitle).arrange(DOWN, buff=1)
+        title.to_edge(RIGHT).shift(UP)
+        subtitle.to_edge(RIGHT).shift(RIGHT*(subtitle.width+1) + UP)
+        logo.to_corner(DR, buff=.6).shift(.2*LEFT)
+
+        shift = 14
+        rect = RoundedRectangle(
+            height=logo.height*1.2,
+            width=15,
+            stroke_width=0,
+            fill_opacity=1,
+            corner_radius=.1,
+            fill_color=[GREEN, RED],
+            sheen_direction=UP)\
+            .set_y(logo.get_y())\
+            .to_edge(RIGHT)\
+            .shift(shift*LEFT)
+        bgrect = BackgroundRectangle(logo, color=MONOKAI_ORANGE)
+
+        self.play(FadeIn(title))
+        self.wait()
+        self.play(
+            subtitle.animate.shift(LEFT*(subtitle.width+1)),
+            rect.animate.shift(RIGHT*shift),
+            FadeIn(logo, shift=DOWN),
+            run_time=3
+        )
+
+        self.wait(2)
+        logosmall = logo.copy().scale(.4).to_corner(DR, buff=.2)
+        self.play(ReplacementTransform(
+            logo, logosmall))
+
+        self.play(
+            LaggedStart(
+                rect.animate.shift(shift*LEFT),
+                FadeOut(Group(title, subtitle)),
+                lag_ratio=.7,
+                run_time=3
+            )
+        )
 
 
 class planimetry(Scene):
@@ -49,7 +114,7 @@ class planimetry(Scene):
             color=GRAY,
             stroke_width=0,
             fill_opacity=.3,
-            corner_radius=.15
+            corner_radius=.1
         ).shift(LEFT)
         vgroup = VGroup(vmob, bg).to_corner(DL, buff=0).shift(LEFT*(3+w)+.5*UP)
         ym = Rectangle(width=.1,
@@ -70,6 +135,13 @@ class planimetry(Scene):
         )
 
         return (ym, vgroup)
+
+    def make_prime(self, p1, p2, **kwargs):
+        vec = p2-p1
+        len = .15
+        lin = Line(p1, p2, **kwargs).scale(1/np.linalg.norm(vec)*len)
+        lin.rotate(TAU/4)
+        return lin
 
     def construct(self):
         tmpl = TexTemplate()
@@ -97,6 +169,10 @@ class planimetry(Scene):
             midpoint(b.get_center(), c)))
         tancirc = always_redraw(
             lambda: self.tangent_circle(cb, d.get_center(), color=MONOKAI_PINK))
+        prime1 = always_redraw(lambda: self.make_prime(
+            b.get_center(), d.get_center(), color=MONOKAI_BLUE))
+        prime2 = always_redraw(lambda: self.make_prime(
+            c, d.get_center(), color=MONOKAI_BLUE))
         line1 = Line(DOWN, UP+RIGHT)
         print("tancirc.radius: ", tancirc.radius, tancirc.width/2)
         ca = Line(c, a, color=MONOKAI_BLUE)
@@ -136,7 +212,7 @@ class planimetry(Scene):
         self.play(Create(abc))
         # self.play()
         self.add(cb, Dot(a), Dot(c), b, d, e, f)
-        self.play(Create(tancirc))
+        self.play(Create(tancirc), Create(prime1), Create(prime2))
         self.play(Create(de))
         self.wait()
         self.play(
@@ -153,7 +229,7 @@ class planimetry(Scene):
         tos = [DL, UR, DR, RIGHT, DOWN, LEFT]
 
         middles = [(b, d), (c, d), (b, f), (f, a), (c, e), (a, e)]
-        marks = ['a', 'a', 'x', '2x', 'y', '2y']
+        marks = ['a', 'a', 'x', '3x', 'y', '2y']
         mark_tos = [RIGHT, RIGHT, UL, UL, DOWN, DOWN]
 
         letters = []
@@ -176,7 +252,13 @@ class planimetry(Scene):
             marksxy.append(
                 MathTex(mark, color=MONOKAI_YELLOW).add_updater(func))
 
-        self.play(*(Write(m) for m in marksxy))
+        self.wait(4)
+        waits = [0, 2, 0, 1, 0, 0]
+        for m, w in zip(marksxy, waits):
+            self.play(Write(m))
+            self.wait(w)
+
+        # self.play(*(Write(m) for m in marksxy))
         # self.add(tancirc)
         letters[-2].clear_updaters()
         letters[-1].clear_updaters()
@@ -192,7 +274,7 @@ class planimetry(Scene):
                 AnimationGroup(
                     ym.animate.shift(2*DOWN),
                     h.animate.shift(LEFT*h.width),
-                    lag_ratio=.2),
+                    lag_ratio=.9),
                 # geomgroup.animate.shift(RIGHT*2),
                 run_time=1,
                 lag_ratio=.8
@@ -200,19 +282,6 @@ class planimetry(Scene):
 
         self.wait()
         # self.play(geomgroup.animate.shift(RIGHT))
-
-        soln = [r'BD^2 = AF \cdot BF', r'a^2 = x \cdot 4x',
-                r',\, a=2x', r',\, x = \frac{a}{2}', r',\, BC = 2a']
-        soln1 = [r'a^2 = y \cdot 3y',
-                 r',\, y =\frac{a}{\sqrt3}', r',\, AC = a\sqrt3']
-        soln2 = [r'\cos C = \frac{\frac{AC}{2}}{BC} ',
-                 r' = \frac{\frac{a \sqrt3}{2}}{2a}', r'= \frac{\sqrt3}{4}']
-        soln3 = [r'ED^2 = EC^2 + CD^2 - 2CE\cdot CD\cdot \cos C',
-                 r'10 = \frac{a^2}{3} + a^2 - 2\cdot\frac{a}{\sqrt3}\cdot \frac{\sqrt3}{4}',
-                 r'10=a^2 +\frac{a^2}{3} - \frac{a^2}{2}',
-                 r'10 =\frac{5a^2}{6}',
-                 r'a = 2\sqrt3',
-                 r'BC = 4\sqrt3']
 
         # group = Group(*[MathTex(s) for s in [soln3]])\
         #     .arrange(DOWN)\
@@ -238,27 +307,78 @@ class planimetry(Scene):
         # $BC = 4\sqrt3$""")
         # self.play(Write(group))
 
+        plan = Group(*[Tex(p) for p in
+                       [r'$AB$ и $AC$ через $a$',
+                        r'$\longrightarrow$',
+                        r'$\cos C$',
+                        r'$\longrightarrow$',
+                        r'$a$',
+                        r'$\longrightarrow$'
+                        '$BC$']
+                       ])
+        plan.arrange(RIGHT).next_to(geomgroup, DOWN)
+
+        self.wait(15)
+        waits = [1, 1, 1, 6, 0, 1]
+        for p, w in zip(plan, waits):
+            self.play(Write(p))
+            self.wait(w)
+
+        soln = [r'a^2 = AF \cdot BF', r'a^2 = x \cdot 4x',
+                r',\, a=2x', r',\, x = \frac{a}{2},', r'\, AB = 2a']
+        soln1 = [r'a^2 = y \cdot 3y',
+                 r',\, y =\frac{a}{\sqrt3},', r'\, AC = a\sqrt3']
+        soln2 = [r'\cos C = \frac{\frac{AC}{2}}{BC} ',
+                 r' = \frac{\frac{a \sqrt3}{2}}{2a}', r'= \frac{\sqrt3}{4}']
+        soln3 = [r'ED^2 = EC^2 + CD^2 - 2CE\cdot CD\cdot \cos C',
+                 r'10 = \frac{a^2}{3} + a^2 - 2\cdot\frac{a}{\sqrt3}\cdot \frac{\sqrt3}{4}',
+                 r'10=a^2 +\frac{a^2}{3} - \frac{a^2}{2}',
+                 r'10 =\frac{5a^2}{6}',
+                 r',\, a = 2\sqrt3,',
+                 r'\quad BC = 4\sqrt3']
+
+        self.wait(2)
         g = MathTex(soln[0]).to_corner(UL)
         g1 = MathTex(*soln[1:]). next_to(g, DOWN).to_edge(LEFT)
+
         self.play(Write(g))
+        self.wait(1)
+
         for s in g1:
             self.play(Write(s))
             self.wait()
-        self.wait()
 
+        self.wait(3)
+        waits = [1, 2, 1]
+        g2 = MathTex(*soln1).next_to(g1, DOWN).to_edge(LEFT)
+        for s in g2:
+            self.play(Write(s))
+            self.wait()
+
+        self.play(Indicate(g1[-1]), Indicate(g2[-1]), run_time=3)
+        self.wait(4)
         self.play(b.animate.set_x(ca.get_x()),
                   letters[-2].animate.next_to(eprime, DOWN, buff=.1),
                   letters[-1].animate.next_to(fprime, UL, buff=.1),
                   e.animate.become(Dot(eprime)),
                   f.animate.become(Dot(fprime)),
                   run_time=3)
-        self.wait()
-
-        g2 = MathTex(*soln1).next_to(g1, DOWN).to_edge(LEFT)
-        self.play(Write(g2))
+        self.wait(5)
+        dline = DashedLine(b, ca.get_center(), color=MONOKAI_BLUE)
+        rightangle = DashedVMobject(
+            RightAngle(dline, ca, quadrant=(-1, -1),
+                       color=MONOKAI_BLUE, length=.2),
+            num_dashes=9
+        )
+        anglec = Angle(cb, ca, radius=.3)
 
         g3 = MathTex(*soln2).next_to(g2, DOWN).to_edge(LEFT)
-        self.play(Write(g3))
+        self.play(Write(g3[0]), Create(dline))
+        self.play(Create(rightangle))
+        self.play(Create(anglec))
+        self.wait(5)
+        self.play(Write(g3[1:]))
+        self.wait(2)
 
         g4 = MathTex(soln3[0]).next_to(g3, DOWN).to_edge(LEFT)
         self.play(Write(g4))
@@ -266,9 +386,19 @@ class planimetry(Scene):
         g5 = MathTex(soln3[1]).next_to(g4, DOWN).to_edge(LEFT)
         self.play(Write(g5))
 
-        g6 = MathTex(*soln3[2:]).next_to(g5, DOWN).to_edge(LEFT)
-        for s in g6:
-            self.play(Write(s))
-            self.wait()
+        self.wait()
 
-        self.wait(2)
+        g6 = MathTex(soln3[2]).next_to(g5, DOWN).to_edge(LEFT)
+        self.play(Write(g6))
+        g7 = MathTex(*soln3[3:]).next_to(g6, DOWN).to_edge(LEFT)
+        for s in g7:
+            self.play(Write(s))
+
+        self.play(Indicate(g7[-1], color=MONOKAI_GREEN), run_time=3)
+
+        self.wait()
+
+
+class param(Scene):
+    def construct(self):
+        pass
