@@ -17,7 +17,7 @@ class intro(Scene):
         """)
 
         text = ['Дополнительные',
-                'вступительные испытания МГУ', '2022, 5 поток']
+                'вступительные испытания МГУ', '2022, 6 поток']
         # title1 = Text('Дополнительные', font='sans serif')
         # title2 = Text('вступительные испытания МГУ', font='sans serif')
         title = Group(*[Text(t, font='sans serif', font_size=36)
@@ -41,13 +41,13 @@ class intro(Scene):
             stroke_width=0,
             fill_opacity=1,
             corner_radius=.1,
-            fill_color=[GREEN, RED],
-            sheen_direction=UP)\
+            fill_color=['#344C11', '#778D45'], sheen_direction=UP)\
             .set_y(logo.get_y())\
             .to_edge(RIGHT)\
             .shift(shift*LEFT)
         bgrect = BackgroundRectangle(logo, color=MONOKAI_ORANGE)
 
+        self.wait(1.3)
         self.play(FadeIn(title))
         self.wait()
         self.play(
@@ -56,8 +56,8 @@ class intro(Scene):
             FadeIn(logo, shift=DOWN),
             run_time=3
         )
+        self.wait()
 
-        self.wait(2)
         logosmall = logo.copy().scale(.4).to_corner(DR, buff=.2)
         self.play(ReplacementTransform(
             logo, logosmall))
@@ -66,8 +66,8 @@ class intro(Scene):
             LaggedStart(
                 rect.animate.shift(shift*LEFT),
                 FadeOut(Group(title, subtitle)),
-                lag_ratio=.7,
-                run_time=3
+                lag_ratio=.1,
+                run_time=2
             )
         )
 
@@ -153,6 +153,11 @@ class planimetry(Scene):
         MathTex.set_default(tex_template=tmpl, font_size=28)
         Dot.set_default(fill_opacity=0)
 
+        logo = Text('repetit-fm.ru', font='ubuntu')\
+            .to_corner(DR, buff=.6).shift(.2*LEFT)\
+            .copy().scale(.4).to_corner(DR, buff=.2)
+        self.add(logo)
+
         text = Tex(
             r'Окружность, проходящая через вершину $A$ треугольника $A B C$, касается его стороны $B C$ в точке $D$ и пересекает стороны $A C$ и $A B$ в точках $E$ и $F$ соответственно. Известно, что $A F=3 B F$, $B D=C D, A E=2 C E$ и что $E D=\sqrt{10}$. Найдите $B C$.', tex_environment='flushleft')
 
@@ -203,7 +208,7 @@ class planimetry(Scene):
         fprime = self.circle_line_intersection(circprime, Line(a, bprime))
 
         dano = Tex('Дано:')
-        conds = ['BD = CD', 'AF = 3 BF', 'AE=2CE', 'BC=?']
+        conds = ['BD = CD', 'AF = 3 BF', 'AE=2CE', r'ED=\sqrt{10}', 'BC=?']
         given = VGroup(dano, *[MathTex(c) for c in conds])\
             .arrange(DOWN)\
             .next_to(abc, RIGHT)\
@@ -221,16 +226,14 @@ class planimetry(Scene):
                 lag_ratio=.3,
                 run_time=1.5
             ))
+        # vertices = [v if type(v) != Dot else v.get_center()
+        #             for v in [a, b, c, d, e, f]]
+        sqrt = MathTex(r'\sqrt{10}', color=MONOKAI_BLUE)
+        sqrt.add_updater(lambda m: m.next_to(mymidpoint(d, e), LEFT, buff=.1))
         vertices = [a, b, c, d, e, f]
         for v in vertices:
             print(type(v), '\n')
-        # vertices = [v if type(v) != Dot else v.get_center()
-        #             for v in [a, b, c, d, e, f]]
         tos = [DL, UR, DR, RIGHT, DOWN, LEFT]
-
-        middles = [(b, d), (c, d), (b, f), (f, a), (c, e), (a, e)]
-        marks = ['a', 'a', 'x', '3x', 'y', '2y']
-        mark_tos = [RIGHT, RIGHT, UL, UL, DOWN, DOWN]
 
         letters = []
         for l, v, to in zip(string.ascii_uppercase, vertices, tos):
@@ -240,11 +243,17 @@ class planimetry(Scene):
         self.play(
             LaggedStart(
                 *(Write(l) for l in letters),
+                Write(sqrt),
                 lag_ratio=.3,
                 run_time=1.5
             )
         )
 
+        self.wait(11)
+
+        middles = [(b, d), (c, d), (b, f), (f, a), (c, e), (a, e)]
+        marks = ['a', 'a', 'x', '3x', 'y', '2y']
+        mark_tos = [RIGHT, RIGHT, UL, UL, DOWN, DOWN]
         marksxy = []
         for mark, mid, to in zip(marks, middles, mark_tos):
             def func(m, mid=mid, to=to):
@@ -324,14 +333,14 @@ class planimetry(Scene):
             self.play(Write(p))
             self.wait(w)
 
-        soln = [r'a^2 = AF \cdot BF', r'a^2 = x \cdot 4x',
+        soln = [r'a^2 = BF \cdot AB', r'a^2 = x \cdot 4x',
                 r',\, a=2x', r',\, x = \frac{a}{2},', r'\, AB = 2a']
         soln1 = [r'a^2 = y \cdot 3y',
                  r',\, y =\frac{a}{\sqrt3},', r'\, AC = a\sqrt3']
         soln2 = [r'\cos C = \frac{\frac{AC}{2}}{BC} ',
                  r' = \frac{\frac{a \sqrt3}{2}}{2a}', r'= \frac{\sqrt3}{4}']
         soln3 = [r'ED^2 = EC^2 + CD^2 - 2CE\cdot CD\cdot \cos C',
-                 r'10 = \frac{a^2}{3} + a^2 - 2\cdot\frac{a}{\sqrt3}\cdot \frac{\sqrt3}{4}',
+                 r'10 = \frac{a^2}{3} + a^2 - 2\cdot\frac{a}{\sqrt3}\cdot a \cdot \frac{\sqrt3}{4}',
                  r'10=a^2 +\frac{a^2}{3} - \frac{a^2}{2}',
                  r'10 =\frac{5a^2}{6}',
                  r',\, a = 2\sqrt3,',
@@ -396,7 +405,9 @@ class planimetry(Scene):
 
         self.play(Indicate(g7[-1], color=MONOKAI_GREEN), run_time=3)
 
-        self.wait()
+        self.wait(10)
+        self.clear()
+        self.wait(2)
 
 
 class param(Scene):
