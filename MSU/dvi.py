@@ -1,4 +1,3 @@
-from turtle import down, right
 from manim import *
 
 import numpy as np
@@ -411,5 +410,536 @@ class planimetry(Scene):
 
 
 class param(Scene):
+    def make_hint(self, mob, color=YELLOW):
+        h = mob.height
+        w = mob.width
+        bg = RoundedRectangle(
+            width=w+2.2,
+            height=h + .2,
+            color=GRAY,
+            stroke_width=0,
+            fill_opacity=.3,
+            corner_radius=.1
+        ).shift(LEFT)
+        content = Group(mob, bg).to_corner(DL, buff=0).shift(LEFT*(3+w)+.5*UP)
+        vline = Rectangle(width=.1,
+                          height=bg.height,
+                          stroke_width=0,
+                          fill_color=color,
+                          fill_opacity=1)\
+            .to_corner(DL, buff=0)\
+            .set_y(content.get_y())\
+            .shift(2*DOWN)
+        self.play(
+            LaggedStart(
+                vline.animate.shift(2*UP),
+                content.animate.shift(RIGHT*(1.5+w)),
+                lag_ratio=.8,
+                run_time=1.5
+            )
+        )
+        return (vline, content)
+
+    def remove_hint(self, hint):
+        vline, content = hint
+        self.play(
+            LaggedStart(
+                AnimationGroup(
+                    vline.animate.shift(2*DOWN),
+                    content.animate.shift(LEFT*content.width),
+                    lag_ratio=.9),
+                # geomgroup.animate.shift(RIGHT*2),
+                run_time=1,
+                lag_ratio=.8
+            ))
+
     def construct(self):
-        pass
+        tmpl = TexTemplate()
+        tmpl.add_to_preamble(r"""
+        \usepackage{mathtext}
+        \usepackage[T2A]{fontenc}
+        \usepackage[utf8]{inputenc}
+        \DeclareMathOperator{\tg}{\mathop{tg}}
+        """)
+        MathTex.set_default(tex_template=tmpl, font_size=28)
+        Dot.set_default(fill_opacity=0)
+        problem = Tex(r'Найдите все значения параметра $a$ из интервала $(0,1)$, при которых для каждого $x$ из интервала $(0, \pi / 4)$ существует не более одного значения $y$ в интервале $(0, \pi / 4)$, такого что', tex_environment='flushleft')
+
+        h0 = r'\tg(\alpha - \beta) = \frac{\tg \alpha - \tg \beta}{1 + \tg \alpha \tg \beta}'
+        h1 = r"""\sin \alpha \sin \beta= \frac12 (\cos(\alpha - \beta) -\cos(\alpha + \beta)) \\
+                 \cos\alpha \cos \beta = \frac12(\cos (x+y) + \cos(x-y)) """
+        h2 = r'\cos \alpha - \cos \beta = -2\sin \frac{\alpha + \beta}{2} \cos \frac{\alpha - \beta}{2}'
+        soln = [[r'\frac{\tg x \tg y}{\tg(a(x+y))}=', r'{ \tg(x+y)-\tg(a(x+y))    \over 1+\tg(x+y) \tg(a(x+y)) }'],
+                [r' \tg x \tg y \over \tg(a(x+y))=',
+                 r' \tg(x+y  - a(x+y))'],
+                [r'\tg x \tg y = \tg((x+y)(1-a)) \tg(a(x+y))'],
+                [r' \frac{\cos(x - y) - \cos(x+y)}{\cos(x+y) + \cos (x-y)} = \frac{\cos(x+y -2a(x+y)) - \cos (x+y)}{\cos (x+y) + \cos (x+y -2a(x+y))}'],
+                [r' \frac{p - q}{p+q} = \frac{r - q}{q+r} '],
+                [r' pq - q^2 + pr - qr = pr -pq + qr -q^2 '],
+                [r' 2pq = 2 qr '],
+                [r' q(p-r) = 0 '],
+                [r' \cos(x-y) - \cos(x+y - 2a(x+y)) = 0 '],
+                [r' 2 \sin (x - a(x+y)) \sin(y - a(x+y)) = 0 '],
+                [r' x - a(x+y)=0, y - a(x+y) = 0 '],
+                [r' y = \frac{1-a}{a} x, y = \frac{a}{1-a} x '],
+                ]
+
+        # text.to_edge(UP)
+        problem = self.make_hint(problem)
+        primo = MathTex(*soln[0]).to_edge(UP)
+        segundo = MathTex(*soln[1])
+        self.play(Write(primo))
+        self.wait(2)
+        self.remove_hint(problem)
+        self.wait()
+        alphabeta = self.make_hint(MathTex(h0))
+        self.wait(3)
+        self.play(Transform(primo[1:], segundo[1:].next_to(
+            primo[0], RIGHT, buff=.2)))
+        self.wait(3)
+        self.remove_hint(alphabeta)
+
+        g = Group(*(
+            MathTex(*s) for s in soln[2:9])
+        )\
+            .arrange(DOWN)\
+            .next_to(primo, DOWN)
+
+        self.play(Write(g[0]))
+
+        sinsin = self.make_hint(MathTex(h1))
+        for s in g:
+            self.play(Write(s))
+            self.wait()
+
+        # axes = Axes(
+        #     x_range=[-1, 5],
+        #     y_range=[-1, 5],
+        #     x_length=3,
+        #     y_length=3,
+        #     tips=False,
+        #     axis_config={"include_ticks": False}
+        # )
+        # axes_labels = axes.get_axis_labels()
+
+        # one = axes.c2p(4, 4)
+        # d_lines = axes.get_lines_to_point(one, color=MONOKAI_BLUE)
+        # pi4x = MathTex(r'\frac{\pi}{4}', color=MONOKAI_BLUE).next_to(
+        #     axes.c2p(4, 0), DOWN, buff=.3)
+        # pi4y = MathTex(r'\frac{\pi}{4}', color=MONOKAI_BLUE).next_to(
+        #     axes.c2p(0, 4), LEFT, buff=.3)
+
+        # line1 = axes.plot(
+        #     lambda x: 3*x, x_range=[-.5/3, 5.5/3], color=MONOKAI_PINK)
+        # line2 = axes.plot(lambda x: 1/3 * x,
+        #                   x_range=[-.5, 5.5], color=MONOKAI_PINK)
+
+        # p = ValueTracker(0)
+        # vert_line = always_redraw(
+        #     lambda: DashedLine(
+        #         axes.c2p(p.get_value(), 0),
+        #         axes.c2p(p.get_value(), 4)
+        #     )
+        # )
+
+        # self.play(Create(axes))
+        # self.play(Write(axes_labels))
+        # self.play(Create(d_lines, reverse=True))
+        # self.play(FadeIn(pi4x), FadeIn(pi4y))
+        # self.play(Create(line1))
+        # self.play(Create(line2))
+        # self.play(Create(vert_line))
+        # self.play(p.animate.set_value(4/3), run_time=2)
+        self.wait(3)
+
+
+class inequality(Scene):
+    def make_hint(self, mob, color=YELLOW, height=0, **kwargs):
+        h = mob.height
+        w = kwargs.get('width', mob.width)
+        bg = RoundedRectangle(
+            width=w+2.2,
+            height=h + .2,
+            color=GRAY,
+            stroke_width=0,
+            fill_opacity=.3,
+            corner_radius=.08
+        ).shift(LEFT)
+        content = Group(mob, bg).to_corner(
+            DL, buff=0).shift(LEFT*(3+w)+.5*UP + UP*height)
+        vline = Rectangle(width=.1,
+                          height=bg.height,
+                          stroke_width=0,
+                          fill_color=color,
+                          fill_opacity=1)
+        vline.to_corner(DL, buff=0)\
+            .set_y(content.get_y())\
+            .shift(DOWN*3)
+        self.play(
+            LaggedStart(
+                vline.animate.shift(UP*3),
+                content.animate.shift(RIGHT*(1.5+w)),
+                lag_ratio=.5,
+                run_time=1.5
+            )
+        )
+        return (vline, content)
+
+    def remove_hint(self, hint):
+        vline, content = hint
+        self.play(
+            LaggedStart(
+                vline.animate.shift(2*DOWN),
+                content.animate.shift(LEFT*content.width),
+                lag_ratio=.4,
+                run_time=1
+            ))
+
+    def make_shade(self, p1, p2):
+        vec = p2-p1
+        vec_len = np.linalg.norm(vec)
+        unit_vec = vec/vec_len
+        direction = angle_between_vectors(vec, RIGHT)
+        angle = TAU/6
+        dl = .15
+
+        l = .2
+
+        def prime():
+            return Rectangle(width=l,
+                             height=.05,
+                             stroke_width=0,
+                             fill_color=MONOKAI_BLUE,
+                             fill_opacity=1,)\
+                .move_to(p1)\
+                .rotate(direction + angle)\
+                .shift(l/2 * rotate_vector(unit_vec, angle))
+        # print(vec_len, angle)
+        shade = [prime().shift(unit_vec*i)
+                 for i in np.arange(dl, vec_len-dl, dl)
+                 ]
+
+        # print(type(shade))
+        return shade
+
+    def construct(self):
+        tmpl = TexTemplate()
+        tmpl.add_to_preamble(r"""
+        \usepackage{mathtext}
+        \usepackage[T2A]{fontenc}
+        \usepackage[utf8]{inputenc}
+        \DeclareMathOperator{\tg}{\mathop{tg}}
+        \usepackage{amssymb}""")
+        MathTex.set_default(tex_template=tmpl, font_size=28)
+
+        mainlog = r'\log _{x}\left(x^{2}+\frac{3}{2}\right)'
+
+        ineq = MathTex(
+            f'{mainlog} \\leqslant 4 \\log_{{x^2 + \\frac32}} (x)').to_edge(UP).shift(RIGHT)
+        self.play(Write(ineq))
+        self.wait()
+
+        hint0 = self.make_hint(MathTex(r'\log_a b = {1 \over \log_b a}'))
+        self.wait(3)
+
+        sub = f't = {mainlog}'
+        ineq1 = [r't \leqslant \frac4t,\,',
+                 '{t^2 - 4 \over t} \leqslant 0', ]
+        ineq1 = Group(*[MathTex(t) for t in ineq1]
+                      ).arrange(RIGHT).next_to(ineq, DOWN)
+
+        self.play(Write(ineq1[0]))
+        self.wait(2)
+        self.remove_hint(hint0)
+        self.play(Write(ineq1[1]))
+
+        numline = NumberLine(
+            x_range=[-4, 4],
+            length=5,
+            include_ticks=False,
+            color=MONOKAI_YELLOW,
+            z_index=2).next_to(ineq1, DOWN, buff=.7)
+        signs = ['-', '+', '-', '+']
+        nums = [-2, 0, 2]
+        colors = [MONOKAI_YELLOW, BLACK, MONOKAI_YELLOW]
+        circles = [Circle(
+            radius=.06,
+            color=MONOKAI_YELLOW,
+            fill_opacity=1,
+            fill_color=col,
+            stroke_width=2,
+            z_index=3
+        ).move_to(numline.n2p(n)) for n, col in zip(nums, colors)]
+        roots = [-4, -2, 0, 2, 4]
+        pairs = zip(signs, roots[:-1], roots[1:])
+        shown_signs = [MathTex(s).next_to(midpoint(numline.n2p(p1), numline.n2p(p2)), UP)
+                       for s, p1, p2 in pairs]
+        labels = [MathTex(n).next_to(numline.n2p(n), DOWN) for n in nums]
+
+        self.play(Create(numline))
+
+        shades = self.make_shade(numline.n2p(-4), numline.n2p(-2)) +\
+            self.make_shade(numline.n2p(0), numline.n2p(2))
+
+        self.play(
+            LaggedStart(
+                *(Create(c) for c in circles),
+                lag_ratio=.3,
+            ),
+            LaggedStart(
+                *(FadeIn(l) for l in labels),
+                lag_ratio=.3
+            )
+        )
+        self.play(
+            LaggedStart(
+                *(FadeIn(s, shift=UP) for s in shown_signs),
+                lag_ratio=.3,
+                run_time=1))
+        self.play(
+            LaggedStart(
+                *[Create(s) for s in shades],
+                lag_ratio=.3,
+                run_time=1
+            )
+        )
+
+        ans = MathTex(
+            r' t \in (-\infty;-2] \cup (0; 2] ').next_to(numline, DOWN, buff=.75)
+        # self.play(Write(ans))
+        self.wait()
+
+        case2 = [rf"""
+                \left\{{
+                    \begin{{array}}{{l}}
+                    {mainlog} >  \\
+                    {mainlog} \leqslant
+                    \end{{array}}
+                \right.
+                """,
+                 r'\Leftrightarrow'
+                 r"""
+                \left\{
+                    \begin{array}{l}
+                        (x-1)\left(x^2 + \frac32 - 1 \right) > 0 \\
+                        (x-1)\left(x^2 + \frac32 - x^2 \right) \leqslant 0
+                    \end{array}
+                    \right.
+                """,
+                 '\Leftrightarrow',
+                 r"""
+                \left\{
+                    \begin{array}{l}
+                        x-1 > 0 \\
+                        x-1 \leqslant 0
+                    \end{array}
+                """,
+                 r'\Leftrightarrow x \in \varnothing']
+        case2 = Group(*[MathTex(c) for c in case2]
+                      ).arrange(DOWN).next_to(numline, DOWN)
+
+        # system on x, rationalization and animation
+        log1 = MathTex(f'{mainlog}')
+        gt = MathTex('>')
+        leq = MathTex(r'\leqslant')
+        zero = MathTex('0')
+        two = MathTex('2')
+        g1 = Group(log1, gt, zero).arrange(
+            RIGHT, buff=.15).next_to(numline, DOWN, buff=.7).shift(LEFT*1.5)
+        log2 = log1.copy().shift(DOWN)
+        g2 = Group(log2, leq, two) .arrange(
+            RIGHT, buff=.15).next_to(g1, DOWN)
+        brace = BraceBetweenPoints(
+            log1.get_top(), log2.get_bottom(), direction=LEFT).shift(LEFT*.7)
+        logx1 = MathTex(r'\log_x 1').next_to(gt, RIGHT, buff=.15)
+        logxx = MathTex(r'\log_x x').next_to(leq, RIGHT, buff=.15)
+
+        self.play(GrowFromCenter(brace),
+                  *(Write(f) for f in g1),
+                  *(Write(f) for f in g2))
+        self.wait()
+
+        self.play(FadeOut(zero), FadeIn(logx1))
+        self.play(FadeIn(logxx), two.animate.scale(.7).next_to(
+            logxx, UR, buff=0.01).shift(.08*DOWN))
+        minus = MathTex('-').move_to(gt)
+        self.wait()
+
+        h1 = MathTex(
+            r"""
+            \log_a f \leqslant \log_a g
+            \Leftrightarrow
+            \left[
+            \begin{array}{l}
+                \left\{
+                \begin{array}{l}
+                    a > 1\\
+                    f \leqslant g
+                \end{array} \right.
+                \\
+                \left\{
+                    \begin{array}{l}
+                    a < 1\\
+                    f \geqslant g
+                    \end{array}
+                \right.
+            \end{array}
+            \right.
+            """)
+        h2 = MathTex(
+            r'\text{знак}(\log_a f - \log_a g) = \text{знак} ((a-1)(f-g))')
+        hint1 = self.make_hint(h1, width=h1.width + 1.9)
+        self.wait(2)
+        hint2 = self.make_hint(
+            h2, height=hint1[1].height + SMALL_BUFF)
+
+        self.play(FadeIn(minus),
+                  gt.animate.next_to(logx1, RIGHT, buff=.15),
+                  FadeIn(MathTex('0').next_to(gt, RIGHT, buff=1.3)),
+                  FadeIn(minus.copy().move_to(leq)),
+                  leq.animate.next_to(logxx, RIGHT, buff=.15),
+                  FadeIn(MathTex('0').next_to(leq, RIGHT, buff=1.3)),
+                  )
+        self.wait()
+
+        paran1 = MathTex(r'{{(x-1)}}{{\left(x^2 + \frac32 -1\right)}}{{> 0}}')
+        paran2 = MathTex(
+            r'{{(x-1)}}{{\left(x^2 + \frac32 - x^2\right)}}{{\leqslant 0}}')
+        paran1.next_to(gt, RIGHT, buff=1.5)
+        paran2.next_to(leq, RIGHT, buff=1.5)
+        brace2 = brace.copy().next_to(paran1, LEFT, buff=0).set_y(brace.get_y())
+
+        self.play(GrowFromCenter(brace2), Write(paran1), Write(paran2))
+
+        self.play(
+            LaggedStart(
+                LaggedStart(
+                    hint1[0].animate.shift(3*DOWN),
+                    hint1[1].animate.shift(LEFT*hint1[1].width),
+                    lag_ratio=.3
+                ),
+                LaggedStart(
+                    hint2[0].animate.shift(4*DOWN),
+                    hint2[1].animate.shift(LEFT*hint2[1].width),
+                    lag_ratio=.3
+                ),
+            )
+        )
+
+        self.play(Indicate(paran1[1], color=MONOKAI_GREEN),
+                  Indicate(paran2[1], color=MONOKAI_GREEN),
+                  run_time=3)
+        self.wait()
+        self.play(
+            TransformMatchingTex(
+                paran1, MathTex(
+                    '{{(x-1)}}{{> 0}}').next_to(gt, RIGHT, buff=1.5)
+            ),
+            TransformMatchingTex(
+                paran2, MathTex(
+                    r'{{(x-1)}}{{\leqslant 0}}').next_to(leq, RIGHT, buff=1.5)
+            ))
+        self.wait()
+
+        left_column = Group(*self.mobjects)
+        self.play(left_column.animate.shift(5*LEFT))
+
+        begincase1 = MathTex(
+            *[f'{mainlog}', '\\leqslant', '-2', r'\log_x x'])
+        case1 = [r'(x-1)\left( x^2 + \frac32 - \frac{1}{x^2} \right) \leqslant 0',
+                 r'\frac{(x-1)(2x^4+3x^2 -2)}{x^2}  \leqslant 0',
+                 r'\frac{(x-1)(2x^2 -1)(x^2+2)}{x^2} \leqslant 0']
+        case1 = [MathTex(c) for c in case1]
+        begincase1[0:2].to_edge(UP).shift(3*RIGHT)
+        minusTwo = begincase1[2].next_to(begincase1[1], RIGHT, buff=.1)
+        logx = begincase1[3].next_to(begincase1[1], RIGHT, buff=.1)
+        minus = MathTex('-'). next_to(logx, LEFT, buff=.1)
+        zero = MathTex('{{\\leqslant}} 0').next_to(logx, RIGHT, buff=.3)
+
+        self.play(Write(begincase1[:3]))
+        self.wait()
+        self.play(FadeIn(logx), minusTwo.animate.scale(.7).next_to(
+            logx, UR, buff=0).shift(.05*DOWN))
+        self.wait()
+
+        self.play(begincase1[1].animate.move_to(
+            zero[0].get_center()), FadeIn(minus), FadeIn(zero[1]))
+
+        left_column.add(minus, zero)
+
+        g1 = Group(*case1)\
+            .arrange(DOWN)\
+            .next_to(begincase1, DOWN)
+        for c in g1:
+            self.play(Write(c))
+            self.wait()
+
+        numline = NumberLine(
+            x_range=[-4, 4],
+            length=5,
+            include_ticks=False,
+            color=MONOKAI_YELLOW,
+            z_index=2).next_to(g1, DOWN, buff=1)
+        signs = ['-', '+', '+', '-', '+']
+        nums = [-2.5, -1, 1, 2.5]
+        colors = [MONOKAI_YELLOW, BLACK, MONOKAI_YELLOW, MONOKAI_YELLOW]
+        circles = [Circle(radius=.05,
+                          color=YELLOW_A,
+                          fill_opacity=1,
+                          fill_color=col,
+                          stroke_width=1.5,
+                          z_index=3)
+                   .move_to(
+            numline.n2p(n)) for n, col in zip(nums, colors)]
+        points = [-4, *nums, 4]
+        pairs = zip(signs, points[: -1], points[1:])
+        shown_signs = [MathTex(s).next_to(midpoint(numline.n2p(p1), numline.n2p(p2)), UP)
+                       for s, p1, p2 in pairs]
+
+        texnums = [r'-\frac{1}{\sqrt2}', '0', r'\frac{1}{\sqrt2}', '1']
+        labels = [MathTex(texnum).next_to(numline.n2p(n), DOWN)
+                  for n, texnum in zip(nums, texnums)]
+
+        self.play(Create(numline))
+        shades = self.make_shade(numline.get_start(), numline.n2p(-2.5)) +\
+            self.make_shade(numline.n2p(1), numline.n2p(2.5))
+
+        self.play(
+            LaggedStart(
+                *(Create(c) for c in circles),
+                lag_ratio=.3,
+            ),
+            LaggedStart(
+                *(FadeIn(l) for l in labels),
+                lag_ratio=.3,
+            )
+        )
+        self.play(
+            LaggedStart(
+                *(FadeIn(s, shift=UP) for s in shown_signs),
+                lag_ratio=.3,
+                run_time=1))
+        self.play(
+            LaggedStart(
+                *[Create(s) for s in shades],
+                lag_ratio=.3,
+                run_time=1
+            )
+        )
+        self.wait(3)
+
+        final_ans = MathTex(r'\left[ \frac{1}{\sqrt2}; 1 \right)')
+        # fital_ans = MathTex(r'\left[ \right)')
+        final_ans.next_to(numline, buff=2)
+        self.play(Write(final_ans))
+        # self.play(final_ans.animate.scale(1.3).set_color(MONOKAI_GREEN))
+        self.wait(3)
+
+
+class test(Scene):
+    def construct(self):
+        two = MathTex(r'{{\leqslant}}{{2}}')
+        log = MathTex(r'{{\leqslant}}\log_x x^{{2}}')
+
+        self.play(TransformMatchingTex(two, log))
+        self.wait(3)
