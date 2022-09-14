@@ -1,12 +1,81 @@
 from manim import *
 
+import regex as re
 import numpy as np
 import string
 from sympy import symbols
 from sympy.solvers.solveset import nonlinsolve
 
+MONOKAI_YELLOW = '#E6DB96'
 
-class intro(Scene):
+
+class introInequality(Scene):
+    def construct(self):
+        tmpl = TexTemplate()
+        tmpl.add_to_preamble(r"""
+        \usepackage{mathtext}
+        \usepackage[T2A]{fontenc}
+        \usepackage[utf8]{inputenc}
+        """)
+
+        text = ['Дополнительные',
+                'вступительные испытания МГУ', '2022, 6 поток']
+        # title1 = Text('Дополнительные', font='sans serif')
+        # title2 = Text('вступительные испытания МГУ', font='sans serif')
+        title = Group(*[Text(t, font='sans serif', font_size=36)
+                        for t in text]).arrange(DOWN)
+        for t in title:
+            t.to_edge(RIGHT)
+
+        subtitle = Text('Неравенство', font='sans serif',
+                        font_size=34, color=RED_A)
+        logo = Text('repetit-fm.ru', font='ubuntu')
+
+        g = Group(title, subtitle).arrange(DOWN, buff=1)
+        title.to_edge(RIGHT).shift(UP)
+        subtitle.to_edge(RIGHT).shift(RIGHT*(subtitle.width+1) + UP)
+        logo.to_corner(DR, buff=.6).shift(.2*LEFT)
+
+        shift = 14
+        rect = RoundedRectangle(
+            height=logo.height*1.2,
+            width=15,
+            stroke_width=0,
+            fill_opacity=1,
+            corner_radius=.1,
+            fill_color=['#344C11', '#778D45'], sheen_direction=UP)\
+            .set_y(logo.get_y())\
+            .to_edge(RIGHT)\
+            .shift(shift*LEFT)
+        bgrect = BackgroundRectangle(logo, color=MONOKAI_ORANGE)
+
+        self.wait(1.3)
+        self.play(FadeIn(title))
+        self.wait()
+        self.play(
+            subtitle.animate.shift(LEFT*(subtitle.width+1)),
+            rect.animate.shift(RIGHT*shift),
+            FadeIn(logo, shift=DOWN),
+            run_time=3
+        )
+        self.wait()
+
+        logosmall = logo.copy().scale(.4).to_corner(DR, buff=.2)
+        self.play(ReplacementTransform(
+            logo, logosmall))
+
+        self.play(
+            LaggedStart(
+                rect.animate.shift(shift*LEFT),
+                FadeOut(Group(title, subtitle)),
+                lag_ratio=.1,
+                run_time=2
+            )
+        )
+    pass
+
+
+class introPlane(Scene):
     def construct(self):
         tmpl = TexTemplate()
         tmpl.add_to_preamble(r"""
@@ -632,26 +701,31 @@ class inequality(Scene):
         \usepackage{amssymb}""")
         MathTex.set_default(tex_template=tmpl, font_size=28)
 
-        mainlog = r'\log _{x}\left(x^{2}+\frac{3}{2}\right)'
+        logo = always_redraw(lambda: Text('repetit-fm.ru', font='ubuntu')
+                             .to_corner(DR, buff=.6).shift(.2*LEFT)
+                             .copy().scale(.4).to_corner(DR, buff=.2))
+        self.add(logo)
 
+        mainlog = r'\log _{x}\left(x^{2}+\frac{3}{2}\right)'
         ineq = MathTex(
             f'{mainlog} \\leqslant 4 \\log_{{x^2 + \\frac32}} (x)').to_edge(UP).shift(RIGHT)
         self.play(Write(ineq))
-        self.wait()
+        self.wait(7)
 
         hint0 = self.make_hint(MathTex(r'\log_a b = {1 \over \log_b a}'))
-        self.wait(3)
 
         sub = f't = {mainlog}'
-        ineq1 = [r't \leqslant \frac4t,\,',
+        ineq1 = [f't={mainlog},\, ',
+                 r't \leqslant \frac4t,\,',
                  '{t^2 - 4 \over t} \leqslant 0', ]
         ineq1 = Group(*[MathTex(t) for t in ineq1]
                       ).arrange(RIGHT).next_to(ineq, DOWN)
-
+        self.wait(3)
         self.play(Write(ineq1[0]))
-        self.wait(2)
+        self.wait()
         self.remove_hint(hint0)
         self.play(Write(ineq1[1]))
+        self.play(Write(ineq1[2]))
 
         numline = NumberLine(
             x_range=[-4, 4],
@@ -670,11 +744,12 @@ class inequality(Scene):
             stroke_width=2,
             z_index=3
         ).move_to(numline.n2p(n)) for n, col in zip(nums, colors)]
-        roots = [-4, -2, 0, 2, 4]
+        roots = [-4, *nums, 4]
         pairs = zip(signs, roots[:-1], roots[1:])
         shown_signs = [MathTex(s).next_to(midpoint(numline.n2p(p1), numline.n2p(p2)), UP)
                        for s, p1, p2 in pairs]
-        labels = [MathTex(n).next_to(numline.n2p(n), DOWN) for n in nums]
+        labels = [MathTex(n, color=MONOKAI_YELLOW).next_to(
+            numline.n2p(n), DOWN) for n in nums]
 
         self.play(Create(numline))
 
@@ -707,7 +782,7 @@ class inequality(Scene):
         ans = MathTex(
             r' t \in (-\infty;-2] \cup (0; 2] ').next_to(numline, DOWN, buff=.75)
         # self.play(Write(ans))
-        self.wait()
+        self.wait(6)
 
         case2 = [rf"""
                 \left\{{
@@ -757,30 +832,30 @@ class inequality(Scene):
         self.play(GrowFromCenter(brace),
                   *(Write(f) for f in g1),
                   *(Write(f) for f in g2))
-        self.wait()
+        self.wait(52)
 
         self.play(FadeOut(zero), FadeIn(logx1))
         self.play(FadeIn(logxx), two.animate.scale(.7).next_to(
             logxx, UR, buff=0.01).shift(.08*DOWN))
         minus = MathTex('-').move_to(gt)
-        self.wait()
+        self.wait(7)
 
         h1 = MathTex(
             r"""
-            \log_a f \leqslant \log_a g
+            \log_a f > \log_a g
             \Leftrightarrow
             \left[
             \begin{array}{l}
                 \left\{
                 \begin{array}{l}
                     a > 1\\
-                    f \leqslant g
+                    f > g
                 \end{array} \right.
                 \\
                 \left\{
                     \begin{array}{l}
                     a < 1\\
-                    f \geqslant g
+                    f < g
                     \end{array}
                 \right.
             \end{array}
@@ -789,9 +864,22 @@ class inequality(Scene):
         h2 = MathTex(
             r'\text{знак}(\log_a f - \log_a g) = \text{знак} ((a-1)(f-g))')
         hint1 = self.make_hint(h1, width=h1.width + 1.9)
-        self.wait(2)
+        self.wait(8)
         hint2 = self.make_hint(
             h2, height=hint1[1].height + SMALL_BUFF)
+        m = re.search('.*?(?=\=)', hint2[1][0].get_tex_string())
+        signs = hint2[1][0][0]
+        print(m.start(), m.end(), signs, '\n', hint2[1][0].get_tex_string())
+        self.wait()
+        self.play(Indicate(signs[:17]),
+                  color=MONOKAI_GREEN, run_time=2)
+        self.wait()
+        self.play(Indicate(signs[18:]),
+                  color=MONOKAI_GREEN, run_time=2)
+
+        systems = hint1[1][0][0]
+        self.wait(13)
+        self.play(Indicate(systems[16:], color=MONOKAI_GREEN), run_time=2)
 
         self.play(FadeIn(minus),
                   gt.animate.next_to(logx1, RIGHT, buff=.15),
@@ -799,12 +887,12 @@ class inequality(Scene):
                   FadeIn(minus.copy().move_to(leq)),
                   leq.animate.next_to(logxx, RIGHT, buff=.15),
                   FadeIn(MathTex('0').next_to(leq, RIGHT, buff=1.3)),
+                  run_time=3
                   )
-        self.wait()
 
-        paran1 = MathTex(r'{{(x-1)}}{{\left(x^2 + \frac32 -1\right)}}{{> 0}}')
+        paran1 = MathTex(r'({{x-1}}){{\left(x^2 + \frac32 -1\right)}}{{> 0}}')
         paran2 = MathTex(
-            r'{{(x-1)}}{{\left(x^2 + \frac32 - x^2\right)}}{{\leqslant 0}}')
+            r'({{x-1}}){{\left(x^2 + \frac32 - x^2\right)}}{{\leqslant 0}}')
         paran1.next_to(gt, RIGHT, buff=1.5)
         paran2.next_to(leq, RIGHT, buff=1.5)
         brace2 = brace.copy().next_to(paran1, LEFT, buff=0).set_y(brace.get_y())
@@ -825,21 +913,21 @@ class inequality(Scene):
                 ),
             )
         )
-
-        self.play(Indicate(paran1[1], color=MONOKAI_GREEN),
-                  Indicate(paran2[1], color=MONOKAI_GREEN),
+        self.wait(2)
+        self.play(Indicate(paran1[3], color=MONOKAI_GREEN),
+                  Indicate(paran2[3], color=MONOKAI_GREEN),
                   run_time=3)
-        self.wait()
+        self.wait(6)
         self.play(
             TransformMatchingTex(
                 paran1, MathTex(
-                    '{{(x-1)}}{{> 0}}').next_to(gt, RIGHT, buff=1.5)
+                    '{{x-1}}{{> 0}}').next_to(gt, RIGHT, buff=1.5)
             ),
             TransformMatchingTex(
                 paran2, MathTex(
-                    r'{{(x-1)}}{{\leqslant 0}}').next_to(leq, RIGHT, buff=1.5)
+                    r'{{x-1}}{{\leqslant 0}}').next_to(leq, RIGHT, buff=1.5)
             ))
-        self.wait()
+        self.wait(7)
 
         left_column = Group(*self.mobjects)
         self.play(left_column.animate.shift(5*LEFT))
@@ -870,9 +958,12 @@ class inequality(Scene):
         g1 = Group(*case1)\
             .arrange(DOWN)\
             .next_to(begincase1, DOWN)
-        for c in g1:
+
+        self.wait(3)
+        waits = [4, 2, 1]
+        for c, w in zip(g1, waits):
             self.play(Write(c))
-            self.wait()
+            self.wait(w)
 
         numline = NumberLine(
             x_range=[-4, 4],
@@ -897,9 +988,10 @@ class inequality(Scene):
                        for s, p1, p2 in pairs]
 
         texnums = [r'-\frac{1}{\sqrt2}', '0', r'\frac{1}{\sqrt2}', '1']
-        labels = [MathTex(texnum).next_to(numline.n2p(n), DOWN)
+        labels = [MathTex(texnum, color=MONOKAI_YELLOW).next_to(numline.n2p(n), DOWN)
                   for n, texnum in zip(nums, texnums)]
 
+        self.wait(3)
         self.play(Create(numline))
         shades = self.make_shade(numline.get_start(), numline.n2p(-2.5)) +\
             self.make_shade(numline.n2p(1), numline.n2p(2.5))
@@ -912,7 +1004,8 @@ class inequality(Scene):
             LaggedStart(
                 *(FadeIn(l) for l in labels),
                 lag_ratio=.3,
-            )
+            ),
+            run_time=1
         )
         self.play(
             LaggedStart(
@@ -928,12 +1021,13 @@ class inequality(Scene):
         )
         self.wait(3)
 
-        final_ans = MathTex(r'\left[ \frac{1}{\sqrt2}; 1 \right)')
+        final_ans = MathTex(r"\left[ \frac{1}{\sqrt2}; 1 \right)")
         # fital_ans = MathTex(r'\left[ \right)')
-        final_ans.next_to(numline, buff=2)
+        final_ans.next_to(numline, DOWN, buff=1.5)
         self.play(Write(final_ans))
-        # self.play(final_ans.animate.scale(1.3).set_color(MONOKAI_GREEN))
-        self.wait(3)
+        self.wait()
+        self.play(final_ans.animate.scale(1.5).set_color(MONOKAI_GREEN))
+        self.wait(11)
 
 
 class test(Scene):
