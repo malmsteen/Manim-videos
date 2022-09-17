@@ -49,16 +49,14 @@ class introInequality(Scene):
             .shift(shift*LEFT)
         bgrect = BackgroundRectangle(logo, color=MONOKAI_ORANGE)
 
-        self.wait(1.3)
         self.play(FadeIn(title))
-        self.wait()
         self.play(
             subtitle.animate.shift(LEFT*(subtitle.width+1)),
             rect.animate.shift(RIGHT*shift),
             FadeIn(logo, shift=DOWN),
             run_time=3
         )
-        self.wait()
+        self.wait(4)
 
         logosmall = logo.copy().scale(.4).to_corner(DR, buff=.2)
         self.play(ReplacementTransform(
@@ -72,7 +70,7 @@ class introInequality(Scene):
                 run_time=2
             )
         )
-    pass
+        self.wait(.55)
 
 
 class introPlane(Scene):
@@ -164,10 +162,7 @@ class planimetry(Scene):
         soln = nonlinsolve([(x-c[0])**2 + (y - c[1])**2 - r**2,
                             (x-p1[0])*line_vect[1] - (y - p1[1])*line_vect[0]],
                            [x, y])
-        # tmp = [float(f) for tup in soln for f in tup]
-        # self.play(Create(Dot(x1)), Create(Dot(x2)))
-        # print(type(x1), x2)
-        # print(type(soln[1]))
+
         print(soln)
         lst = [[float(tup[0]), float(tup[1]), 0] for tup in soln]
         print(lst)
@@ -624,6 +619,7 @@ class param(Scene):
 
 class inequality(Scene):
     def make_hint(self, mob, color=YELLOW, height=0, **kwargs):
+        # heigth is position over bottom of frame
         h = mob.height
         w = kwargs.get('width', mob.width)
         bg = RoundedRectangle(
@@ -701,16 +697,15 @@ class inequality(Scene):
         \usepackage{amssymb}""")
         MathTex.set_default(tex_template=tmpl, font_size=28)
 
-        logo = always_redraw(lambda: Text('repetit-fm.ru', font='ubuntu')
-                             .to_corner(DR, buff=.6).shift(.2*LEFT)
-                             .copy().scale(.4).to_corner(DR, buff=.2))
+        logo = Text('repetit-fm.ru', font='ubuntu')\
+            .scale(.4).to_corner(DR, buff=.2)
         self.add(logo)
 
         mainlog = r'\log _{x}\left(x^{2}+\frac{3}{2}\right)'
         ineq = MathTex(
             f'{mainlog} \\leqslant 4 \\log_{{x^2 + \\frac32}} (x)').to_edge(UP).shift(RIGHT)
         self.play(Write(ineq))
-        self.wait(7)
+        self.wait(8)
 
         hint0 = self.make_hint(MathTex(r'\log_a b = {1 \over \log_b a}'))
 
@@ -723,9 +718,10 @@ class inequality(Scene):
         self.wait(3)
         self.play(Write(ineq1[0]))
         self.wait()
-        self.remove_hint(hint0)
         self.play(Write(ineq1[1]))
         self.play(Write(ineq1[2]))
+
+        self.remove_hint(hint0)
 
         numline = NumberLine(
             x_range=[-4, 4],
@@ -746,7 +742,7 @@ class inequality(Scene):
         ).move_to(numline.n2p(n)) for n, col in zip(nums, colors)]
         roots = [-4, *nums, 4]
         pairs = zip(signs, roots[:-1], roots[1:])
-        shown_signs = [MathTex(s).next_to(midpoint(numline.n2p(p1), numline.n2p(p2)), UP)
+        shown_signs = [MathTex(s, color=MONOKAI_YELLOW).move_to(midpoint(numline.n2p(p1), numline.n2p(p2))+UP*.3)
                        for s, p1, p2 in pairs]
         labels = [MathTex(n, color=MONOKAI_YELLOW).next_to(
             numline.n2p(n), DOWN) for n in nums]
@@ -759,11 +755,11 @@ class inequality(Scene):
         self.play(
             LaggedStart(
                 *(Create(c) for c in circles),
-                lag_ratio=.3,
+                lag_ratio=.2,
             ),
             LaggedStart(
                 *(FadeIn(l) for l in labels),
-                lag_ratio=.3
+                lag_ratio=.2
             )
         )
         self.play(
@@ -784,34 +780,34 @@ class inequality(Scene):
         # self.play(Write(ans))
         self.wait(6)
 
-        case2 = [rf"""
-                \left\{{
-                    \begin{{array}}{{l}}
-                    {mainlog} >  \\
-                    {mainlog} \leqslant
-                    \end{{array}}
-                \right.
-                """,
-                 r'\Leftrightarrow'
-                 r"""
-                \left\{
-                    \begin{array}{l}
-                        (x-1)\left(x^2 + \frac32 - 1 \right) > 0 \\
-                        (x-1)\left(x^2 + \frac32 - x^2 \right) \leqslant 0
-                    \end{array}
-                    \right.
-                """,
-                 '\Leftrightarrow',
-                 r"""
-                \left\{
-                    \begin{array}{l}
-                        x-1 > 0 \\
-                        x-1 \leqslant 0
-                    \end{array}
-                """,
-                 r'\Leftrightarrow x \in \varnothing']
-        case2 = Group(*[MathTex(c) for c in case2]
-                      ).arrange(DOWN).next_to(numline, DOWN)
+        # case2 = [rf"""
+        #         \left\{{
+        #             \begin{{array}}{{l}}
+        #             {mainlog} >  \\
+        #             {mainlog} \leqslant
+        #             \end{{array}}
+        #         \right.
+        #         """,
+        #          r'\Leftrightarrow'
+        #          r"""
+        #         \left\{
+        #             \begin{array}{l}
+        #                 (x-1)\left(x^2 + \frac32 - 1 \right) > 0 \\
+        #                 (x-1)\left(x^2 + \frac32 - x^2 \right) \leqslant 0
+        #             \end{array}
+        #             \right.
+        #         """,
+        #          '\Leftrightarrow',
+        #          r"""
+        #         \left\{
+        #             \begin{array}{l}
+        #                 x-1 > 0 \\
+        #                 x-1 \leqslant 0
+        #             \end{array}
+        #         """,
+        #          r'\Leftrightarrow x \in \varnothing']
+        # case2 = Group(*[MathTex(c) for c in case2]
+        #               ).arrange(DOWN).next_to(numline, DOWN)
 
         # system on x, rationalization and animation
         log1 = MathTex(f'{mainlog}')
@@ -832,7 +828,15 @@ class inequality(Scene):
         self.play(GrowFromCenter(brace),
                   *(Write(f) for f in g1),
                   *(Write(f) for f in g2))
-        self.wait(52)
+
+        self.wait(7)
+        ineq1 = log1[0][5:-1]
+        self.play(Indicate(ineq1, color=MONOKAI_GREEN), run_time=2)
+        self.wait(19)
+        ineq2 = log2[0][5:-1]
+        self.play(Indicate(ineq2, color=MONOKAI_GREEN), run_time=2)
+        # 4 seconds on previous animations
+        self.wait(22)
 
         self.play(FadeOut(zero), FadeIn(logx1))
         self.play(FadeIn(logxx), two.animate.scale(.7).next_to(
@@ -870,7 +874,7 @@ class inequality(Scene):
         m = re.search('.*?(?=\=)', hint2[1][0].get_tex_string())
         signs = hint2[1][0][0]
         print(m.start(), m.end(), signs, '\n', hint2[1][0].get_tex_string())
-        self.wait()
+        self.wait(2)
         self.play(Indicate(signs[:17]),
                   color=MONOKAI_GREEN, run_time=2)
         self.wait()
@@ -878,9 +882,10 @@ class inequality(Scene):
                   color=MONOKAI_GREEN, run_time=2)
 
         systems = hint1[1][0][0]
-        self.wait(13)
+        self.wait(14)
         self.play(Indicate(systems[16:], color=MONOKAI_GREEN), run_time=2)
 
+        self.wait(2)
         self.play(FadeIn(minus),
                   gt.animate.next_to(logx1, RIGHT, buff=.15),
                   FadeIn(MathTex('0').next_to(gt, RIGHT, buff=1.3)),
@@ -913,11 +918,12 @@ class inequality(Scene):
                 ),
             )
         )
-        self.wait(2)
+
+        self.wait()
         self.play(Indicate(paran1[3], color=MONOKAI_GREEN),
                   Indicate(paran2[3], color=MONOKAI_GREEN),
                   run_time=3)
-        self.wait(6)
+        self.wait(3)
         self.play(
             TransformMatchingTex(
                 paran1, MathTex(
@@ -927,9 +933,12 @@ class inequality(Scene):
                 paran2, MathTex(
                     r'{{x-1}}{{\leqslant 0}}').next_to(leq, RIGHT, buff=1.5)
             ))
-        self.wait(7)
-
+        self.wait(9)
+        self.remove(logo)
         left_column = Group(*self.mobjects)
+        self.add(logo)
+        print(type(self.mobjects))
+        # left_column -= logo
         self.play(left_column.animate.shift(5*LEFT))
 
         begincase1 = MathTex(
@@ -974,7 +983,7 @@ class inequality(Scene):
         signs = ['-', '+', '+', '-', '+']
         nums = [-2.5, -1, 1, 2.5]
         colors = [MONOKAI_YELLOW, BLACK, MONOKAI_YELLOW, MONOKAI_YELLOW]
-        circles = [Circle(radius=.05,
+        circles = [Circle(radius=.06,
                           color=YELLOW_A,
                           fill_opacity=1,
                           fill_color=col,
@@ -983,8 +992,10 @@ class inequality(Scene):
                    .move_to(
             numline.n2p(n)) for n, col in zip(nums, colors)]
         points = [-4, *nums, 4]
+        plus_h = MathTex('+').height
+        minus_shifts = [0 if s == '+' else plus_h/2 for s in signs]
         pairs = zip(signs, points[: -1], points[1:])
-        shown_signs = [MathTex(s).next_to(midpoint(numline.n2p(p1), numline.n2p(p2)), UP)
+        shown_signs = [MathTex(s, color=MONOKAI_YELLOW).move_to(midpoint(numline.n2p(p1), numline.n2p(p2))+UP*.3)
                        for s, p1, p2 in pairs]
 
         texnums = [r'-\frac{1}{\sqrt2}', '0', r'\frac{1}{\sqrt2}', '1']
@@ -999,14 +1010,15 @@ class inequality(Scene):
         self.play(
             LaggedStart(
                 *(Create(c) for c in circles),
-                lag_ratio=.3,
+                lag_ratio=.2,
             ),
             LaggedStart(
                 *(FadeIn(l) for l in labels),
-                lag_ratio=.3,
+                lag_ratio=.2,
             ),
             run_time=1
         )
+        self.wait()
         self.play(
             LaggedStart(
                 *(FadeIn(s, shift=UP) for s in shown_signs),
@@ -1019,15 +1031,15 @@ class inequality(Scene):
                 run_time=1
             )
         )
-        self.wait(3)
+        self.wait(2)
 
         final_ans = MathTex(r"\left[ \frac{1}{\sqrt2}; 1 \right)")
         # fital_ans = MathTex(r'\left[ \right)')
         final_ans.next_to(numline, DOWN, buff=1.5)
         self.play(Write(final_ans))
         self.wait()
-        self.play(final_ans.animate.scale(1.5).set_color(MONOKAI_GREEN))
-        self.wait(11)
+        self.play(final_ans.animate.scale(1.7).set_color(MONOKAI_GREEN))
+        self.wait(15)
 
 
 class test(Scene):
