@@ -20,7 +20,11 @@ class intervals(Scene):
 
         def substitute_x(formula, mob):
             svgs = formula[0]
-            x_inds = [m.start() for m in re.finditer('x', f.get_tex_string())]
+            # x_inds = [m.start() for m in re.finditer('x', f.get_tex_string())]
+            x_inds = [m.start() for m in re.finditer(
+                'x', re.sub(r'\\,', '', formula.get_tex_string()))]
+            print(x_inds, re.sub(r'\\,', '', formula.get_tex_string()))
+            f = MathTex('(\,x\,-1)(\,x\,+4)(\,x\,-3)(\,x\,+1) > 0 ').shift(UP)
             x_svgs = [svgs[i] for i in x_inds]
             mobs = [mob.copy().animate.move_to(x).set_y(x.get_bottom()[1] + mob.height/2)
                     for x in x_svgs]
@@ -32,10 +36,11 @@ class intervals(Scene):
         ineq = [MathTex(s) for s in [
             '(x-{{1}})', '(x-({{-4}}))', '(x-{{3}})', '(x+{{1}})', '> 0']]
         ineq = Group(*ineq).arrange(RIGHT)
-        f = MathTex('(x-1)(x+4)(x-3)(x+1) > 0 ').shift(UP)
-        ixes = [m.start() for m in re.finditer('x', f.get_tex_string())]
+        f = MathTex('(\,x\,-1)(\,x\,+4)(\,x\,-3)(\,x\,+1) > 0 ').shift(UP)
+        ixes = [m.start() for m in re.finditer(
+            'x', re.sub(r'\\,', '', f.get_tex_string()))]
         numbers = [m.start() for m in re.finditer(
-            r'\d+', re.sub(' ', '', f.get_tex_string()))]
+            r'\d+', re.sub(r' |\\,', '', f.get_tex_string()))]
         for i in ixes:
             f[0][i].set_color(MONOKAI_GREEN)
         print(numbers)
