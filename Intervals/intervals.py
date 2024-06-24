@@ -1,7 +1,6 @@
 
 from symbol import factor, namedexpr_test
 from manim import *
-
 import regex as re
 import numpy as np
 import string
