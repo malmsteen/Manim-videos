@@ -140,6 +140,7 @@ class introPlane(Scene):
 
 class planimetry(Scene):
     def tangent_circle(self, line, point, radius=1, d_alpha=1e-6, **kwargs):
+        # circle tangent to line at point
         vec = line.get_vector()
         p1, p2 = point + vec*d_alpha, point - vec*d_alpha
         ext_point = line.get_start() + 3*LEFT
@@ -882,10 +883,10 @@ class inequality(Scene):
                   color=MONOKAI_GREEN, run_time=2)
 
         systems = hint1[1][0][0]
-        self.wait(14)
-        self.play(Indicate(systems[16:], color=MONOKAI_GREEN), run_time=2)
+        self.wait(12)
+        self.play(Indicate(systems[16:], color=MONOKAI_GREEN), run_time=3)
 
-        self.wait(2)
+        self.wait(3)
         self.play(FadeIn(minus),
                   gt.animate.next_to(logx1, RIGHT, buff=.15),
                   FadeIn(MathTex('0').next_to(gt, RIGHT, buff=1.3)),
