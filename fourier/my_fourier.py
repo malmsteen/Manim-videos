@@ -8,6 +8,7 @@
 from manim import *
 import numpy as np
 # import timeit
+import itertools as it
 
 # config.use_opengl_renderer = True
 
@@ -32,7 +33,7 @@ class FourierSceneAbstract(ZoomedScene):
             "color": BLUE
         }
         self.n_vectors = 150
-        self.cycle_seconds = 15
+        self.cycle_seconds = 5
         self.slow_factor = .25
         self.parametric_func_step = 0.001   
         self.drawn_path_stroke_width = 2
@@ -197,8 +198,8 @@ class FourierScene(FourierSceneAbstract):
         # Camera updater
         last_vector = vectors[-1]
 
-        # def follow_end_vector(camera): 
-        #     camera.move_to(last_vector.get_end())
+        def follow_end_vector(camera): 
+            camera.move_to(last_vector.get_end())
 
         # Scene start
         self.wait(1)
@@ -436,11 +437,158 @@ class FourierSeriesExampleWithRectForZoom(FourierScene):
 class ZoomedInFourierSeriesExample(FourierSeriesExampleWithRectForZoom, MovingCameraScene):
     def __init__(self):
         super().__init__()
-        self.vector_config = {
-            "max_tip_length_to_length_ratio": 0.15,
-            "tip_length": 0.05,
-            }
-        self.parametric_function_step_size = 0.001
+        # self.vector_config = {
+        #     "max_tip_length_to_length_ratio": 0.15,
+        #     "tip_length": 0.05,
+        #     }
+        self.parametric_function_step_size = 0.001    
+        self.zoomed_display_height = 2 # self.rect_scale_factor * config.frame_height
+        self.zoomed_display_width = 16 / 9 * self.zoomed_display_height
+    # def setup(self):
+    #     FourierScene.setup(self)
+    #     MovingCameraScene.setup(self)
+    
+    # def get_rect(self):
+    #     return self.camera
+    
+    def construct(self):
+        # Symbols to draw
+        symbol = self.get_tex_symbol(r'\rm M', RED)
+        # symbol2 = self.get_tex_symbol("e", BLUE)
+        group = VGroup(symbol).arrange(RIGHT)
+
+        # Fourier series for symbol
+        vectors = self.get_fourier_vectors(self.get_path_from_symbol(symbol))
+        circles = self.get_circles(vectors)
+        drawn_path1 = self.get_drawn_path(vectors).set_color(RED)
+
+    
+        all_mobs = VGroup(group)
+
+        # Camera updater
+        last_vector = vectors[-1]
+
+        def follow_end_vector(camera): 
+            camera.move_to(last_vector.get_end())
+
+        # Scene start
+        self.wait(1)
+        self.play(
+            *[
+                GrowArrow(arrow)
+                for vector_group in [vectors]
+                for arrow in vector_group
+            ],
+            *[
+                Create(circle)
+                for circle_group in [circles]
+                for circle in circle_group
+            ],
+            run_time=2.5,
+        )
+
+        rect = self.rect = self.get_rect()
+        rect.set_height(self.rect_scale_factor * config.frame_height)
+        rect.add_updater(lambda m: m.move_to(
+            self.get_rect_center(vectors)
+        ))
+
+        # Add objects to scene
+        self.add( 
+            vectors,
+            circles,
+            drawn_path1.set_stroke(width = 0), 
+            rect           
+        )
+
+        # Camera move
+        # self.play(self.camera.frame.animate.scale(0.3).move_to(last_vector.get_end()), run_time = 2)
+
+        # Add updaters and start vector clock
+        # self.camera.frame.add_updater(follow_end_vector)
+        vectors.add_updater(self.update_vectors)
+        circles.add_updater(self.update_circles)
+        # vectors2.add_updater(self.update_vectors)
+        # circles2.add_updater(self.update_circles)
+        drawn_path1.add_updater(self.update_path)
+        # drawn_path2.add_updater(self.update_path)
+        self.start_vector_clock()
+
+        self.play(self.slow_factor_tracker.animate.set_value(1), run_time = 0.5 * self.cycle_seconds)
+        self.wait(1 * self.cycle_seconds)
+
+        # Move camera then write text
+        # self.camera.frame.remove_updater(follow_end_vector)
+        # self.play(
+            # self.camera.frame.animate.set_width(all_mobs.width * 1.5).move_to(all_mobs.get_center()),
+            # Write(text),
+            # run_time = 1 * self.cycle_seconds,
+        # )
+
+        zoomed_camera = self.zoomed_camera
+        zoomed_display = self.zoomed_display
+        frame = zoomed_camera.frame
+        zoomed_display_frame = zoomed_display.display_frame
+
+        frame.move_to(self.get_rect_center(vectors))
+        frame.frame_width = rect.width
+        frame.frame_height = rect.height 
+        frame.add_updater(lambda m: m.move_to(rect))  
+        
+        # frame.stretch_to_fit_height(rect)
+
+        # frame.set_color(BLUE)
+        # zoomed_display_frame.set_color(RED)
+        zoomed_display.shift(DOWN)
+
+        zd_rect = BackgroundRectangle(zoomed_display, fill_opacity=0, buff=MED_SMALL_BUFF)
+        self.add_foreground_mobject(zd_rect)
+
+        unfold_camera = UpdateFromFunc(zd_rect, lambda rect: rect.replace(zoomed_display))
+                
+        self.activate_zooming()
+
+        self.play(self.get_zoomed_display_pop_out_animation(), unfold_camera)
+        self.cycle_seconds += 10
+        self.wait(0.8 * self.cycle_seconds)
+        self.play(self.slow_factor_tracker.animate.set_value(0), run_time = 0.1 * self.cycle_seconds)
+        self.wait()
+        
+
+
+        self.play(self.slow_factor_tracker.animate.set_value(0), run_time = 0.1 * self.cycle_seconds)
+        self.wait()
+
+
+      
+        # zoomed_camera_text.next_to(zoomed_display_frame, DOWN)
+        # Remove updaters so can animate
+        self.stop_vector_clock()
+        drawn_path1.clear_updaters()
+        # drawn_path2.clear_updaters()
+        vectors.clear_updaters()
+        # vectors2.clear_updaters()
+        circles.clear_updaters()
+        # circles2.clear_updaters()
+
+        self.play(
+            *[
+                Uncreate(vmobject)
+                for vgroup in [vectors, circles]
+                for vmobject in vgroup
+            ],
+            FadeOut(drawn_path1),
+            FadeIn(symbol),
+            run_time = 2.5,
+        )
+
+        self.wait(3)
+
+
+    
+
+        
+        
 
 
 
