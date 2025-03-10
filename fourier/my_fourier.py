@@ -24,7 +24,7 @@ class FourierSceneAbstract(ZoomedScene):
             "buff": 0,
             "max_tip_length_to_length_ratio": 0.25,
             "tip_length": 0.15,
-            "max_stroke_width_to_length_ratio": 10,
+            "max_stroke_width_to_length_ratio":5,
             "stroke_width": 1.4
         }
         self.circle_config = {
@@ -32,7 +32,7 @@ class FourierSceneAbstract(ZoomedScene):
             "stroke_opacity": 0.3,
             "color": BLUE
         }
-        self.n_vectors = 150
+        self.n_vectors = 101
         self.cycle_seconds = 5
         self.slow_factor = .25
         self.parametric_func_step = 0.001   
@@ -62,6 +62,9 @@ class FourierSceneAbstract(ZoomedScene):
     def stop_vector_clock(self):
         self.vector_clock.remove_updater(self.start_vector_clock)
 
+    def get_vector_time(self):
+        return self.vector_clock.get_value()
+    
     def get_fourier_coefs(self, path):
         dt = 1 / self.path_n_samples
         t_range = np.arange(0, 1, dt)
@@ -105,7 +108,7 @@ class FourierSceneAbstract(ZoomedScene):
 
     def update_vectors(self, vectors):
             for v in vectors:
-                time = self.vector_clock.get_value()
+                time = self.get_vector_time()
                 v.shift(v.center_func()-v.get_start())
                 v.set_angle(v.phase + time * v.freq * TAU)  # NOTE Rotate() did not work here for unknown reason, probably related to how manin handles updaters
               
@@ -122,8 +125,9 @@ class FourierSceneAbstract(ZoomedScene):
         for c in circles:
             c.move_to(c.center_func())
             
-    def get_drawn_path(self, vectors):    # TODO Find out application of None, is for placeholder, may be how keyword argument default is set
-
+    def get_drawn_path(self, vectors, stroke_width=None, fade_rate=0.2):    # TODO Find out application of None, is for placeholder, may be how keyword argument default is set
+        if stroke_width is None:
+            stroke_width = self.drawn_path_stroke_width
         def fourier_series_func(t):
             fss = np.sum(np.array([
                 v.coef * np.exp(TAU * 1j * v.freq * t)
@@ -133,29 +137,49 @@ class FourierSceneAbstract(ZoomedScene):
             return real_fss
         
         t_range = np.array([0, 1, self.parametric_func_step])
-        vector_sum_path = ParametricFunction(fourier_series_func, t_range = t_range)
-        broken_path = CurvesAsSubmobjects(vector_sum_path)
-        broken_path.stroke_width = 0
-        broken_path.start_width = self.drawn_path_interpolation_config[0]
-        broken_path.end_width = self.drawn_path_interpolation_config[1]
-        return broken_path
+        path = ParametricFunction(fourier_series_func, t_range = t_range)
+        # broken_path = CurvesAsSubmobjects(vector_sum_path)
+        path.set_stroke(self.drawn_path_color, stroke_width)
+        # broken_path.start_width = self.drawn_path_interpolation_config[0]
+        # broken_path.end_width = self.drawn_path_interpolation_config[1]
+        self.add_path_fader(path, fade_rate)
+        return path
 
-    def update_path(self, broken_path):
-        alpha = self.vector_clock.get_value()
-        n_curves = len(broken_path)
-        alpha_range = np.linspace(0, 1, n_curves)
-        for a, subpath in zip(alpha_range, broken_path):
-            b = (alpha - a)
-            if b < 0:
-                width = 0
-            else:
-                width = self.drawn_path_stroke_width * interpolate(broken_path.start_width, broken_path.end_width, (1 - (b % 1)))
-            subpath.set_stroke(width=width)
+    def add_path_fader(self, path, fade_rate=0.2):
+        stroke_width = np.max(path.get_stroke_width())
+        stroke_opacity = np.max(path.get_stroke_opacity())
+
+        def update_path(path_, dt):
+            alpha = self.get_vector_time()
+            n = path_.get_num_points()
+            fade_factors = (np.linspace(0, 1, n) - alpha) % 1
+            fade_factors = fade_factors**fade_rate
+            path_.set_stroke(
+                width=stroke_width * fade_factors,
+                opacity=stroke_opacity * fade_factors,
+            )
+            return path_
+
+        path.add_updater(update_path)
+        return path
+    
+    # def update_path(self, broken_path):
+    #     alpha = self.vector_clock.get_value()
+    #     n_curves = len(broken_path)
+    #     alpha_range = np.linspace(0, 1, n_curves)
+    #     for a, subpath in zip(alpha_range, broken_path):
+    #         b = (alpha - a)
+    #         if b < 0:
+    #             width = 0
+    #         else:
+    #             width = self.drawn_path_stroke_width * interpolate(broken_path.start_width, broken_path.end_width, (1 - (b % 1)))
+    #         subpath.set_stroke(width=width)
 
 
 class FourierScene(FourierSceneAbstract):
     def __init__(self):
         super().__init__()
+        self.max_circle_stroke_width = 1.0
 
     def get_tex_symbol(self, symbol, color = None):
         symbol = Tex(symbol, **self.fourier_symbol_config)
@@ -167,6 +191,16 @@ class FourierScene(FourierSceneAbstract):
 
     def get_path_from_symbol(self, symbol):
         return symbol.family_members_with_points()[0]
+    
+    def set_decreasing_stroke_widths(self, circles):
+        mcsw = self.max_circle_stroke_width
+        for k, circle in zip(it.count(1), circles):
+            circle.set_stroke(width=max(
+                # mcsw / np.sqrt(k),
+                mcsw / k,
+                mcsw,
+            ))  
+        return circles
 
     def construct(self):
         # Symbols to draw
@@ -177,9 +211,8 @@ class FourierScene(FourierSceneAbstract):
         # Fourier series for symbol
         vectors = self.get_fourier_vectors(self.get_path_from_symbol(symbol))
         circles = self.get_circles(vectors)
-        drawn_path1 = self.get_drawn_path(vectors).set_color(RED)
-
-      
+        self.set_decreasing_stroke_widths(circles)
+        drawn_path1 = self.get_drawn_path(vectors).set_color(RED)   
 
 
 
@@ -228,17 +261,20 @@ class FourierScene(FourierSceneAbstract):
         # self.play(self.camera.frame.animate.scale(0.3).move_to(last_vector.get_end()), run_time = 2)
 
         # Add updaters and start vector clock
-        # self.camera.frame.add_updater(follow_end_vector)
+        self.camera.frame.add_updater(follow_end_vector)
         vectors.add_updater(self.update_vectors)
         circles.add_updater(self.update_circles)
         # vectors2.add_updater(self.update_vectors)
         # circles2.add_updater(self.update_circles)
-        drawn_path1.add_updater(self.update_path)
+        # drawn_path1.add_updater(self.update_path)
         # drawn_path2.add_updater(self.update_path)
         self.start_vector_clock()
 
         self.play(self.slow_factor_tracker.animate.set_value(1), run_time = 0.5 * self.cycle_seconds)
         self.wait(1 * self.cycle_seconds)
+
+        self.cycle_seconds += 15
+        self.play(self.camera.frame.animate.scale(0.1), run_time = 2)
 
         # Move camera then write text
         # self.camera.frame.remove_updater(follow_end_vector)
@@ -248,6 +284,9 @@ class FourierScene(FourierSceneAbstract):
             # run_time = 1 * self.cycle_seconds,
         # )
         self.wait(0.8 * self.cycle_seconds)
+
+        self.play(self.camera.frame.animate.scale(0.1).move_to(last_vector.get_end()), run_time = 2)
+        self.wait(1 * self.cycle_seconds)
         self.play(self.slow_factor_tracker.animate.set_value(0), run_time = 0.5 * self.cycle_seconds)
         
         # Remove updaters so can animate
@@ -436,13 +475,14 @@ class FourierSeriesExampleWithRectForZoom(FourierScene):
 
 class ZoomedInFourierSeriesExample(FourierSeriesExampleWithRectForZoom, MovingCameraScene):
     def __init__(self):
-        super().__init__()
+        super().__init__()        
         # self.vector_config = {
         #     "max_tip_length_to_length_ratio": 0.15,
         #     "tip_length": 0.05,
         #     }
+        self.zoom_factor = .1
         self.parametric_function_step_size = 0.001    
-        self.zoomed_display_height = 2 # self.rect_scale_factor * config.frame_height
+        self.zoomed_display_height = self.rect_scale_factor * config.frame_height / .25
         self.zoomed_display_width = 16 / 9 * self.zoomed_display_height
     # def setup(self):
     #     FourierScene.setup(self)
@@ -545,10 +585,19 @@ class ZoomedInFourierSeriesExample(FourierSeriesExampleWithRectForZoom, MovingCa
         self.add_foreground_mobject(zd_rect)
 
         unfold_camera = UpdateFromFunc(zd_rect, lambda rect: rect.replace(zoomed_display))
-                
-        self.activate_zooming()
+        
+        # all_mobjects = self.mobjects
 
-        self.play(self.get_zoomed_display_pop_out_animation(), unfold_camera)
+        self.activate_zooming()
+        
+
+        self.play(
+            self.get_zoomed_display_pop_out_animation(),
+            unfold_camera,
+            # vectors[0].animate.shift(2*LEFT)
+            # vectors.animate.shift(LEFT)
+            )
+        # self.play(vectors[0].animate.shift(LEFT))
         self.cycle_seconds += 10
         self.wait(0.8 * self.cycle_seconds)
         self.play(self.slow_factor_tracker.animate.set_value(0), run_time = 0.1 * self.cycle_seconds)
@@ -556,8 +605,7 @@ class ZoomedInFourierSeriesExample(FourierSeriesExampleWithRectForZoom, MovingCa
         
 
 
-        self.play(self.slow_factor_tracker.animate.set_value(0), run_time = 0.1 * self.cycle_seconds)
-        self.wait()
+        self.play(self.get_zoomed_display_pop_out_animation(), unfold_camera, rate_func=lambda t: smooth(1 - t))
 
 
       
