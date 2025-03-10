@@ -21,23 +21,23 @@ class FourierSceneAbstract(ZoomedScene):
         }
         self.vector_config = {
             "buff": 0,
-            "max_tip_length_to_length_ratio": 0.25,
+            "max_tip_length_to_length_ratio": 0.2,
             "tip_length": 0.15,
-            "max_stroke_width_to_length_ratio": 10,
-            "stroke_width": 1.4
+            "max_stroke_width_to_length_ratio": 6,
+            "stroke_width": 1
         }
         self.circle_config = {
-            "stroke_width": 1,
-            "stroke_opacity": 0.3,
+            "stroke_width": .2,
+            "stroke_opacity": 0.75,
             "color": BLUE
         }
-        self.n_vectors = 40
+        self.n_vectors = 151
         self.cycle_seconds = 15
-        self.slow_factor = .25
+        self.slow_factor = 1
         self.parametric_func_step = 0.001   
         self.drawn_path_stroke_width = 1
         self.drawn_path_interpolation_config = [0, 1]
-        self.path_n_samples = 1000
+        self.path_n_samples = 10000
         self.freqs = list(range(-self.n_vectors // 2, self.n_vectors // 2 + 1, 1))
         self.freqs.sort(key=abs)
 
@@ -52,8 +52,10 @@ class FourierSceneAbstract(ZoomedScene):
             lambda t, dt: t.increment_value(dt * self.slow_factor_tracker.get_value() / self.cycle_seconds)
         )
 
+    # def stop_vector_clock(self):
+    #     self.vector_clock.remove_updater(self.start_vector_clock)
     def stop_vector_clock(self):
-        self.vector_clock.remove_updater(self.start_vector_clock)
+        self.vector_clock.clear_updaters()
 
     def get_fourier_coefs(self, path):
         dt = 1 / self.path_n_samples
@@ -101,6 +103,13 @@ class FourierSceneAbstract(ZoomedScene):
                 time = self.vector_clock.get_value()
                 v.shift(v.center_func()-v.get_start())
                 v.set_angle(v.phase + time * v.freq * TAU)  # NOTE Rotate() did not work here for unknown reason, probably related to how manin handles updaters
+    
+    def config_zoomed_vectors(self, vectors):
+        for v in vectors:
+            v.max_tip_length_to_length_ratio = .15
+            v.max_width_to_length_ratio = 0.05
+            v.thickness = 0.02
+            
               
     def get_circles(self, vectors):
         circles = VGroup()
@@ -113,8 +122,10 @@ class FourierSceneAbstract(ZoomedScene):
 
     def update_circles(self, circles):
         for c in circles:
+            c.width = 2 * c.radius
             c.move_to(c.center_func())
             
+        
     def get_drawn_path(self, vectors):    # TODO Find out application of None, is for placeholder, may be how keyword argument default is set
 
         def fourier_series_func(t):
@@ -157,7 +168,7 @@ class FourierScene(FourierSceneAbstract):
 
         return symbol
 
-    def get_path_from_symbol(self, symbol):
+    def     get_path_from_symbol(self, symbol):
         return symbol.family_members_with_points()[0]
 
     def construct(self):
@@ -170,7 +181,7 @@ class FourierScene(FourierSceneAbstract):
         vectors1 = self.get_fourier_vectors(self.get_path_from_symbol(symbol1))
         circles1 = self.get_circles(vectors1)
         drawn_path1 = self.get_drawn_path(vectors1).set_color(RED)
-
+        self.vectors = vectors1
         # Fourier series for symbol2
         # vectors2 = self.get_fourier_vectors(self.get_path_from_symbol(symbol2))
         # circles2 = self.get_circles(vectors2)
@@ -187,7 +198,10 @@ class FourierScene(FourierSceneAbstract):
         last_vector = vectors1[-1]
 
         def follow_end_vector(camera): 
-            camera.move_to(last_vector.get_end())
+                camera.move_to(center_of_mass([
+                v.get_end()
+                for v in self.vectors
+        ]))
 
         # Scene start
         self.wait(1)
@@ -211,24 +225,49 @@ class FourierScene(FourierSceneAbstract):
             circles1,
             drawn_path1.set_stroke(width = 0),
             # vectors2,
-            # circles2,
+            # circles2, 
             # drawn_path2.set_stroke(width = 0),
         )
 
         # Camera move
-        self.play(self.camera.frame.animate.scale(0.3).move_to(last_vector.get_end()), run_time = 2)
+        # self.play(self.camera.frame.animate.scale(0.3).move_to(last_vector.get_end()), run_time = 2)
 
-        # Add updaters and start vector clock
-        self.camera.frame.add_updater(follow_end_vector)
+        
         vectors1.add_updater(self.update_vectors)
         circles1.add_updater(self.update_circles)
         drawn_path1.add_updater(self.update_path)
+
+        # self.play(self.slow_factor_tracker.animate.set_value(1), run_time = 0.5 * self.cycle_seconds)
+        # self.wait(1 * self.cycle_seconds)
+
+        
+        # Add updaters and start vector clock
+        
         # vectors2.add_updater(self.update_vectors)
         # circles2.add_updater(self.update_circles)        
         # drawn_path2.add_updater(self.update_path)
         self.start_vector_clock()
 
         self.play(self.slow_factor_tracker.animate.set_value(1), run_time = 0.5 * self.cycle_seconds)
+        self.wait(.3 * self.cycle_seconds)
+        
+        self.stop_vector_clock()
+        
+        
+        # self.camera.frame.remove_updater(follow_end_vector)
+
+        vectors1.add_updater(self.config_zoomed_vectors)
+        self.play(self.camera.frame.animate.scale(0.3).move_to(center_of_mass([
+                v.get_end()
+                for v in self.vectors
+        ])), run_time = 3)  
+        
+        self.camera.frame.add_updater(follow_end_vector)
+        # self.slow_factor = .1 
+        self.start_vector_clock()
+        self.slow_factor_tracker.set_value(.5)
+
+        self.play(self.slow_factor_tracker.animate.set_value(.3), run_time = 0.5 * self.cycle_seconds)
         self.wait(1 * self.cycle_seconds)
 
         # Move camera then write text
@@ -259,5 +298,156 @@ class FourierScene(FourierSceneAbstract):
             FadeIn(symbol1), # symbol2),
             run_time = 2.5,
         )
+
+        self.wait(3)
+
+
+
+class FourierFromSVG(FourierSceneAbstract):
+    def __init__(self):
+        super().__init__()
+        self.file_name = "my_tulip_full_cycle"
+        self.height = 6
+    
+    def get_svg(self):
+        shape = SVGMobject(self.file_name)
+        return shape
+
+    def get_path(self):
+        shape = self.get_svg()
+        path = shape.family_members_with_points()[0]
+        # path.set_height(self.height)
+        path.set_fill(opacity=0)
+        path.set_stroke(WHITE, 0)
+        return path
+
+
+    def construct(self):
+        # svg_mob = self.get_svg(self.file_name)
+        scale_fac = 3.5
+        inpath = self.get_path()
+        inpath.scale(scale_fac)
+        svgmob = self.get_svg().scale(scale_fac)
+        vectors = self.get_fourier_vectors(inpath)
+        circles = self.get_circles(vectors)
+        drawn_path1 = self.get_drawn_path(vectors).set_color(GREEN)
+        self.vectors = vectors
+        # Fourier series for symbol2
+        # vectors2 = self.get_fourier_vectors(self.get_path_from_symbol(symbol2))
+        # circles2 = self.get_circles(vectors2)
+        # drawn_path2 = self.get_drawn_path(vectors2).set_color(BLUE)
+
+        # Text definition
+        # text = Tex("hire", fill_opacity = 1, height = 3)
+        # text.next_to(group, LEFT*1.4)
+
+        # all_mobs = VGroup(group, text)
+        
+        all_mobs = VGroup(inpath, svgmob)
+
+        # Camera updater
+        last_vector = vectors[-1]
+
+        def follow_end_vector(camera): 
+            camera.move_to(last_vector.get_end())
+
+        # Scene start
+        self.wait(1)
+        self.play(
+            *[
+                GrowArrow(arrow)
+                for vector_group in [vectors] #, vectors2]
+                for arrow in vector_group
+            ],
+            *[
+                Create(circle)
+                for circle_group in [circles] #, circles2]
+                for circle in circle_group
+            ],
+            run_time=2.5,
+        )
+
+        # Add objects to scene
+        self.add( 
+            vectors,
+            circles,
+            drawn_path1.set_stroke(width = 2),
+            # vectors2,
+            # circles2,
+            # drawn_path2.set_stroke(width = 0),
+        )
+
+
+
+          # Camera move
+        # self.play(self.camera.frame.animate.scale(0.3).move_to(last_vector.get_end()), run_time = 2)
+
+        
+        vectors.add_updater(self.update_vectors)
+        circles.add_updater(self.update_circles)
+        drawn_path1.add_updater(self.update_path)
+
+        # self.play(self.slow_factor_tracker.animate.set_value(1), run_time = 0.5 * self.cycle_seconds)
+        # self.wait(1 * self.cycle_seconds)
+
+        
+        # Add updaters and start vector clock
+        
+        # vectors2.add_updater(self.update_vectors)
+        # circles2.add_updater(self.update_circles)        
+        # drawn_path2.add_updater(self.update_path)
+        self.start_vector_clock()
+
+        self.play(self.slow_factor_tracker.animate.set_value(1), run_time = 0.6 * self.cycle_seconds)
+        self.wait(.5 * self.cycle_seconds)
+        
+        self.stop_vector_clock()       
+        # self.camera.frame.remove_updater(follow_end_vector)
+
+        vectors.add_updater(self.config_zoomed_vectors)
+        self.play(self.camera.frame.animate.scale(0.2).move_to(center_of_mass([
+                v.get_end()
+                for v in self.vectors
+        ])), run_time = 3)  
+        
+        self.camera.frame.add_updater(follow_end_vector)
+        # self.slow_factor = .1 
+        self.start_vector_clock()
+        self.slow_factor_tracker.set_value(.2)
+
+        self.play(self.slow_factor_tracker.animate.set_value(.2), run_time = 1 * self.cycle_seconds)
+        self.wait(1 * self.cycle_seconds)
+
+        # Move camera then write text
+        self.camera.frame.remove_updater(follow_end_vector)
+        self.play(
+            self.camera.frame.animate.set_height(all_mobs.height * 1.2).move_to(all_mobs.get_center()),
+        #     Write(text),
+        #     run_time = 1 * self.cycle_seconds,
+        )
+        self.wait(0.8 * self.cycle_seconds)
+        self.play(self.slow_factor_tracker.animate.set_value(0), run_time = 1 * self.cycle_seconds)
+        
+        # Remove updaters so can animate
+        self.stop_vector_clock()
+        
+        for obj in [drawn_path1, vectors, circles]:
+            obj.clear_updaters()
+        # for obj in [drawn_path2, vectors2, circles2]:
+        #     obj.clear_updaters()
+        
+        self.play(
+            *[
+                Uncreate(vmobject)
+                for vgroup in [vectors, circles] #vectors2, , circles2]
+                for vmobject in vgroup
+            ],
+            FadeOut(drawn_path1), # drawn_path2),
+            FadeIn(svgmob), # symbol2),
+            run_time = 3.5,
+        )
+
+        # self.wait(1)
+        # self.play(ShowPassingFlash(svgmob.copy().set_color(YELLOW), run_time=3, time_width=.1))
 
         self.wait(3)
