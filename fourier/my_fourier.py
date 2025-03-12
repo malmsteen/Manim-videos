@@ -22,14 +22,14 @@ class FourierSceneAbstract(ZoomedScene):
         }
         self.vector_config = {
             "buff": 0,
-            "max_tip_length_to_length_ratio": 0.25,
+            "max_tip_length_to_length_ratio": 0.2,
             "tip_length": 0.15,
-            "max_stroke_width_to_length_ratio":5,
-            "stroke_width": 1.4
+            # "max_stroke_width_to_length_ratio": 6,
+            # "stroke_width": 1
         }
         self.circle_config = {
             "stroke_width": 1,
-            "stroke_opacity": 0.3,
+            "stroke_opacity": 0.75,
             "color": BLUE
         }
         self.n_vectors = 101
@@ -195,7 +195,7 @@ class FourierScene(FourierSceneAbstract):
     def set_decreasing_stroke_widths(self, circles):
         mcsw = self.max_circle_stroke_width
         for k, circle in zip(it.count(1), circles):
-            circle.set_stroke(width=max(
+            circle.set_stroke(width=min(
                 # mcsw / np.sqrt(k),
                 mcsw / k,
                 mcsw,
@@ -241,13 +241,15 @@ class FourierScene(FourierSceneAbstract):
                 GrowArrow(arrow)
                 for vector_group in [vectors]
                 for arrow in vector_group
-            ],
+            ],            
+            run_time=2.5,
+        )
+        self.play(
             *[
                 Create(circle)
                 for circle_group in [circles]
                 for circle in circle_group
             ],
-            run_time=2.5,
         )
 
         # Add objects to scene
@@ -367,26 +369,17 @@ class FourierSeriesExampleWithRectForZoom(FourierScene):
 
         vectors = self.get_fourier_vectors(self.get_path_from_symbol(symbol))
         circles = self.get_circles(vectors)
+        self.set_decreasing_stroke_widths(circles)
         drawn_path1 = self.get_drawn_path(vectors).set_color(RED)
         
         # self.add_vectors_circles_path()
-        # self.circles.set_stroke(opacity=0.5)
+
         rect = self.rect = self.get_rect()
         rect.set_height(self.rect_scale_factor * config.frame_height)
         rect.add_updater(lambda m: m.move_to(
             self.get_rect_center(vectors)
         ))
 
-          # Fourier series for symbol2
-        # vectors2 = self.get_fourier_vectors(self.get_path_from_symbol(symbol2))
-        # circles2 = self.get_circles(vectors2)
-        # drawn_path2 = self.get_drawn_path(vectors2).set_color(BLUE)
-
-        # Text definition
-        # text = Tex("hire", fill_opacity = 1, height = 3)
-        # text.next_to(group, LEFT*1.4)
-
-        # all_mobs = VGroup(group, text)
         all_mobs = VGroup(group)
 
         # Camera updater
@@ -417,19 +410,16 @@ class FourierSeriesExampleWithRectForZoom(FourierScene):
             circles,
             drawn_path1.set_stroke(width = 0),            
         )
-
-        
-        
+     
         self.add(rect)
         
-
         # Camera move
         # self.play(self.camera.frame.animate.scale(0.3).move_to(last_vector.get_end()), run_time = 2)
 
         # Add updaters and start vector clock
         # self.camera.frame.add_updater(follow_end_vector)
         vectors.add_updater(self.update_vectors)
-        circles.add_updater(self.update_circles)
+        # circles.add_updater(self.update_circles)
         # vectors2.add_updater(self.update_vectors)
         # circles2.add_updater(self.update_circles)
         drawn_path1.add_updater(self.update_path)
@@ -484,9 +474,9 @@ class ZoomedInFourierSeriesExample(FourierSeriesExampleWithRectForZoom, MovingCa
         self.parametric_function_step_size = 0.001    
         self.zoomed_display_height = self.rect_scale_factor * config.frame_height / .25
         self.zoomed_display_width = 16 / 9 * self.zoomed_display_height
-    # def setup(self):
-    #     FourierScene.setup(self)
-    #     MovingCameraScene.setup(self)
+    def setup(self):
+        FourierScene.setup(self)
+        MovingCameraScene.setup(self)
     
     # def get_rect(self):
     #     return self.camera
@@ -500,6 +490,7 @@ class ZoomedInFourierSeriesExample(FourierSeriesExampleWithRectForZoom, MovingCa
         # Fourier series for symbol
         vectors = self.get_fourier_vectors(self.get_path_from_symbol(symbol))
         circles = self.get_circles(vectors)
+        self.set_decreasing_stroke_widths(circles)
         drawn_path1 = self.get_drawn_path(vectors).set_color(RED)
 
     
