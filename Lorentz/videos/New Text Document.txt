@@ -1,0 +1,3 @@
+uv run manimgl 3b_lorentz.py -r 1080x1920 -w -c "#080404"
+ffmpeg -i cut.mp4 -vf "fade=t=out:st=57:d=3" -af "afade=t=out:st=57:d=3" cut_fade.mp4
+ffmpeg 
